@@ -1,92 +1,48 @@
 import type { H3Event } from 'h3'
-import prisma from './prisma'
 
+/**
+ * Require authentication using nuxt-auth-utils
+ * @param event H3Event
+ * @param allowedRoles Optional array of allowed roles
+ * @returns User object from session
+ */
 export async function requireAuth(event: H3Event, allowedRoles?: string[]) {
-  const token = getCookie(event, 'session_token')
+  const session = await getUserSession(event)
 
-  if (!token) {
+  if (!session || !session.user) {
     throw createError({
       statusCode: 401,
       message: 'Not authenticated'
     })
   }
 
-  // Find session and include user
-  const session = await prisma.session.findUnique({
-    where: { token },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          phone: true,
-          role: true,
-          loyaltyPoint: true,
-          avatar: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      }
-    }
-  })
-
-  if (!session || session.expiresAt < new Date()) {
-    // Delete expired session
-    if (session) {
-      await prisma.session.delete({ where: { token } })
-    }
-    
-    deleteCookie(event, 'session_token')
-    throw createError({
-      statusCode: 401,
-      message: 'Session expired'
-    })
-  }
+  const user = session.user as any
 
   // Check role if specified
-  if (allowedRoles && !allowedRoles.includes(session.user.role)) {
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     throw createError({
       statusCode: 403,
       message: 'Insufficient permissions'
     })
   }
 
-  return session.user
+  return user
 }
 
+/**
+ * Optional authentication - returns user if authenticated, null otherwise
+ * @param event H3Event
+ * @returns User object or null
+ */
 export async function optionalAuth(event: H3Event) {
-  const token = getCookie(event, 'session_token')
-
-  if (!token) {
-    return null
-  }
-
   try {
-    const session = await prisma.session.findUnique({
-      where: { token },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            phone: true,
-            role: true,
-            avatar: true,
-            loyaltyPoint: true,
-            createdAt: true,
-            updatedAt: true
-          }
-        }
-      }
-    })
+    const session = await getUserSession(event)
 
-    if (!session || session.expiresAt < new Date()) {
+    if (!session || !session.user) {
       return null
     }
 
-    return session.user
+    return session.user as any
   } catch (error) {
     return null
   }

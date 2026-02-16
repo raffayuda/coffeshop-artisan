@@ -1,28 +1,21 @@
 # Vercel Deployment Fix - Coffee Shop App
 
-## Issues Fixed
+## Latest Fix (Feb 16, 2026) ✅
 
-### 1. **Authentication System Mismatch** ❌ → ✅
-**Problem:** Server-side API routes were using old session management looking for `session_token` cookie and querying Prisma Session model, while client-side was using nuxt-auth-utils.
+### Issue: vercel.json Secret References
+**Problem:** vercel.json was using `@secret` syntax which requires Vercel Secrets, but environment variables are set directly in dashboard.
 
-**Fixed in:**
-- `server/utils/auth.ts` - Now uses `getUserSession()` from nuxt-auth-utils
-- Removed database Session model queries
-- Aligned with cart API implementation
+**Fixed:**
+- Removed `@database_url` and `@nuxt_session_password` references from vercel.json
+- Simplified configuration to only include function settings
 
-**Impact:** 
-- ✅ Admin dashboard will now load data
-- ✅ Barista dashboard will now work
-- ✅ Payment processing will succeed
-- ✅ All protected API routes will authenticate correctly
+### Issue: Session Cookie Not Working in Production
+**Problem:** After login, API routes return 401 because session cookie isn't being read.
 
-### 2. **Prisma Client Serverless Configuration** ❌ → ✅
-**Problem:** Multiple Prisma Client instances in serverless environment causing connection issues.
-
-**Fixed in:**
-- `server/utils/prisma.ts` - Added singleton pattern with global caching
-- Prevents connection pool exhaustion
-- Proper logging configuration for production
+**Added:**
+- Debug logging in `requireAuth()` function
+- Test endpoint `/api/debug/session` to verify session state
+- Enhanced error logging in login endpoint
 
 ## Required Vercel Configuration
 
@@ -81,7 +74,43 @@ Ensure your PostgreSQL database:
 - **Install Command:** `npm install` (default)
 - **Node Version:** 18.x or higher
 
-### Post-Deployment Checklist
+## Debugging Steps After Deploy
+
+### 1. Test Session Endpoint
+```bash
+# After login, visit this URL in browser:
+https://your-app.vercel.app/api/debug/session
+
+# Should return:
+{
+  "success": true,
+  "hasSession": true,
+  "hasUser": true,
+  "user": { ... },
+  "cookies": ["nuxt-session"]
+}
+```
+
+### 2. Check Vercel Function Logs
+```bash
+# Via CLI
+vercel logs --follow
+
+# Look for these log messages:
+# [Login] Session set for user: {...}
+# [requireAuth] Session check: {...}
+```
+
+### 3. Test API Endpoints
+```bash
+# Test admin orders (should work after login)
+curl https://your-app.vercel.app/api/admin/orders/stats \
+  -H "Cookie: nuxt-session=..."
+
+# Should return stats, not 401
+```
+
+## Common Issues & Solutions
 
 After deploying with fixes:
 

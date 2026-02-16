@@ -11,18 +11,23 @@ export default defineNuxtConfig({
 
   // Runtime configuration for environment variables
   runtimeConfig: {
+    // Server-only runtime config
     session: {
       password: process.env.NUXT_SESSION_PASSWORD || 'default-secret-key-change-in-production-min-32-chars',
       name: 'nuxt-session',
       cookie: {
-        sameSite: 'lax',
+        sameSite: 'lax', // or 'none' if using cross-origin
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
         httpOnly: true,
-        maxAge: 60 * 60 * 24 * 7 // 7 days
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        domain: undefined // Let browser handle domain automatically
       }
     },
-    public: {}
+    // Public runtime config (accessible on both client and server)
+    public: {
+      apiBase: process.env.API_BASE_URL || ''
+    }
   },
 
   tailwindcss: {

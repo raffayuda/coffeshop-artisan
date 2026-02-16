@@ -54,6 +54,12 @@ export default defineEventHandler(async (event) => {
       loggedInAt: Date.now()
     })
 
+    console.log('[Login] Session set for user:', {
+      userId: sessionUser.id,
+      email: sessionUser.email,
+      role: sessionUser.role
+    })
+
     return {
       success: true,
       user: sessionUser

@@ -1,0 +1,36 @@
+{
+  "name": "coffeShop",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@nuxt/icon": "^2.2.1",
+    "@prisma/adapter-pg": "^7.4.0",
+    "bcryptjs": "^3.0.3",
+    "nuxt": "^4.3.1",
+    "nuxt-auth-utils": "^0.5.28",
+    "pg": "^8.18.0",
+    "vue": "^3.5.28",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@iconify-json/mdi": "^1.2.3",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@prisma/client": "^6.19.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.16.0",
+    "dotenv": "^17.3.1",
+    "prisma": "^6.19.2",
+    "tsx": "^4.21.0"
+  }
+}

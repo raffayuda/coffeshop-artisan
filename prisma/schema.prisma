@@ -1,0 +1,446 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  BARISTA
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  E_WALLET
+  COD
+  DANA
+  OVO
+  GOPAY
+  VIRTUAL_ACCOUNT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum MenuCategory {
+  COFFEE
+  NON_COFFEE
+  SNACK
+}
+
+enum MenuSize {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum IceLevel {
+  LESS
+  NORMAL
+  EXTRA
+}
+
+enum SugarLevel {
+  LESS
+  NORMAL
+  EXTRA
+}
+
+// ==================== USER MANAGEMENT ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?   @unique
+  password      String
+  fullName      String
+  role          UserRole  @default(CUSTOMER)
+  avatar        String?
+  loyaltyPoint  Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  addresses           Address[]
+  orders              Order[]
+  loyaltyTransactions LoyaltyTransaction[]
+  vouchers            UserVoucher[]
+  preferences         UserPreference?
+  sessions            Session[]
+  cartItems           CartItem[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Address {
+  id             String   @id @default(cuid())
+  userId         String
+  label          String   // Home, Office, etc
+  fullAddress    String
+  city           String
+  postalCode     String?
+  recipientName  String
+  recipientPhone String
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@map("addresses")
+}
+
+model UserPreference {
+  id         String      @id @default(cuid())
+  userId     String      @unique
+  iceLevel   IceLevel    @default(NORMAL)
+  sugarLevel SugarLevel  @default(NORMAL)
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// ==================== MENU MANAGEMENT ====================
+
+model Menu {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  category    MenuCategory
+  image       String
+  isAvailable Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  prices      MenuPrice[]
+  toppings    MenuTopping[]
+  orderItems  OrderItem[]
+  ingredients MenuIngredient[]
+  cartItems   CartItem[]
+
+  @@map("menus")
+}
+
+model MenuPrice {
+  id        String   @id @default(cuid())
+  menuId    String
+  size      MenuSize
+  price     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@unique([menuId, size])
+  @@map("menu_prices")
+}
+
+model Topping {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  price       Int
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  menus      MenuTopping[]
+  orderItems OrderItemTopping[]
+
+  @@map("toppings")
+}
+
+model MenuTopping {
+  menuId    String
+  toppingId String
+  createdAt DateTime @default(now())
+
+  menu    Menu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  topping Topping @relation(fields: [toppingId], references: [id], onDelete: Cascade)
+
+  @@id([menuId, toppingId])
+  @@map("menu_toppings")
+}
+
+model Ingredient {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  unit         String   // ml, gram, pcs
+  currentStock Float    @default(0)
+  minStock     Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  menus          MenuIngredient[]
+  stockHistories StockHistory[]
+
+  @@map("ingredients")
+}
+
+model MenuIngredient {
+  menuId       String
+  ingredientId String
+  quantity     Float    // amount needed per serving
+  createdAt    DateTime @default(now())
+
+  menu       Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([menuId, ingredientId])
+  @@map("menu_ingredients")
+}
+
+model StockHistory {
+  id           String   @id @default(cuid())
+  ingredientId String
+  quantity     Float
+  type         String   // IN, OUT, ADJUSTMENT
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@map("stock_histories")
+}
+
+// ==================== ORDER MANAGEMENT ====================
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  userId        String
+  addressId     String?
+  type          OrderType   @default(TAKEAWAY)
+  status        OrderStatus @default(PENDING)
+  subtotal      Int
+  discount      Int         @default(0)
+  deliveryFee   Int         @default(0)
+  tax           Int         @default(0)
+  total         Int
+  notes         String?
+  estimatedTime Int?        // in minutes
+  qrCode        String?     @unique
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  user               User                   @relation(fields: [userId], references: [id])
+  address            Address?               @relation(fields: [addressId], references: [id])
+  items              OrderItem[]
+  payment            Payment?
+  statusHistory      OrderStatusHistory[]
+  loyaltyTransaction LoyaltyTransaction?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String      @id @default(cuid())
+  orderId    String
+  menuId     String
+  quantity   Int
+  size       MenuSize
+  iceLevel   IceLevel?
+  sugarLevel SugarLevel?
+  price      Int
+  notes      String?
+  createdAt  DateTime    @default(now())
+
+  order    Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menu     Menu                 @relation(fields: [menuId], references: [id])
+  toppings OrderItemTopping[]
+
+  @@map("order_items")
+}
+
+model OrderItemTopping {
+  orderItemId String
+  toppingId   String
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  topping   Topping   @relation(fields: [toppingId], references: [id])
+
+  @@id([orderItemId, toppingId])
+  @@map("order_item_toppings")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  notes     String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_histories")
+}
+
+// ==================== PAYMENT ====================
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  amount        Int
+  transactionId String?       @unique
+  paidAt        DateTime?
+  proofImage    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// ==================== LOYALTY & PROMO ====================
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  orderId     String?  @unique
+  points      Int
+  type        String   // EARN, REDEEM, EXPIRED, ADJUSTMENT
+  description String?
+  createdAt   DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@map("loyalty_transactions")
+}
+
+model Voucher {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  type        String   // PERCENTAGE, FIXED
+  value       Int
+  minPurchase Int      @default(0)
+  maxDiscount Int?
+  quotaLimit  Int      @default(100)
+  quotaUsed   Int      @default(0)
+  validFrom   DateTime
+  validTo     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userVouchers UserVoucher[]
+
+  @@map("vouchers")
+}
+
+model UserVoucher {
+  id        String    @id @default(cuid())
+  userId    String
+  voucherId String
+  orderId   String?
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, voucherId])
+  @@map("user_vouchers")
+}
+
+// ==================== STORE SETTINGS ====================
+
+model StoreSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   // string, number, boolean, json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("store_settings")
+}
+
+model OperationalHour {
+  id        String   @id @default(cuid())
+  day       String   @unique // MONDAY, TUESDAY, etc
+  openTime  String   // HH:mm format
+  closeTime String
+  isOpen    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("operational_hours")
+}
+
+// ==================== CART ====================
+
+model CartItem {
+  id            String   @id @default(cuid())
+  userId        String
+  menuId        String
+  quantity      Int      @default(1)
+  size          MenuSize
+  iceLevel      IceLevel?
+  sugarLevel    SugarLevel?
+  toppingIds    String[] // Array of topping IDs
+  notes         String?
+  customization String?  // Store customization details for display
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@map("cart_items")
+}

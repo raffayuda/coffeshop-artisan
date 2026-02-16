@@ -1,0 +1,110 @@
+{
+    "storeName": "Artisan Coffee House",
+    "tagline": "Where Every Cup Tells a Story",
+    "description": "We are a specialty coffee roaster and café dedicated to sourcing the finest beans from around the world. Our passionate baristas craft each cup with precision and care, creating an unforgettable coffee experience in a warm, inviting atmosphere.",
+    "about": {
+        "story": "Founded in 2018, Artisan Coffee House was born from a simple passion: to share exceptional coffee with our community. What started as a small roastery has grown into a beloved gathering place where coffee lovers can discover rare single-origin beans, expertly crafted espresso drinks, and fresh-baked pastries.",
+        "mission": "To elevate the coffee experience by combining artisan craftsmanship with sustainable sourcing, creating a space where quality, community, and creativity come together.",
+        "values": [
+            {
+                "title": "Quality First",
+                "description": "We source only the finest beans and use precision brewing methods to ensure every cup is perfect.",
+                "icon": "☕"
+            },
+            {
+                "title": "Sustainability",
+                "description": "We partner with ethical farms and use eco-friendly practices to protect our planet.",
+                "icon": "🌱"
+            },
+            {
+                "title": "Community",
+                "description": "We create a welcoming space where connections are made over great coffee.",
+                "icon": "❤️"
+            }
+        ]
+    },
+    "contact": {
+        "phone": "+62 812-3456-7890",
+        "email": "hello@artisancoffeehouse.com",
+        "address": "Jl. Kopi Kenangan No. 123, Jakarta Selatan 12345",
+        "coordinates": {
+            "lat": -6.2088,
+            "lng": 106.8456
+        }
+    },
+    "hours": {
+        "weekdays": "07:00 - 21:00",
+        "weekend": "08:00 - 22:00",
+        "holiday": "09:00 - 18:00"
+    },
+    "social": {
+        "instagram": "https://instagram.com/artisancoffeehouse",
+        "facebook": "https://facebook.com/artisancoffeehouse",
+        "twitter": "https://twitter.com/artisancoffee",
+        "tiktok": "https://tiktok.com/@artisancoffee"
+    },
+    "team": [
+        {
+            "id": 1,
+            "name": "Sarah Anderson",
+            "role": "Head Barista",
+            "bio": "With 10 years of experience, Sarah brings artistry to every cup.",
+            "image": "/images/team/sarah.jpg"
+        },
+        {
+            "id": 2,
+            "name": "Michael Chen",
+            "role": "Coffee Roaster",
+            "bio": "Michael's expertise in roasting brings out the best flavors in every bean.",
+            "image": "/images/team/michael.jpg"
+        },
+        {
+            "id": 3,
+            "name": "Emily Rodriguez",
+            "role": "Pastry Chef",
+            "bio": "Emily creates fresh pastries daily using traditional techniques.",
+            "image": "/images/team/emily.jpg"
+        },
+        {
+            "id": 4,
+            "name": "David Kim",
+            "role": "Owner & Founder",
+            "bio": "David's vision of community-centered coffee culture drives everything we do.",
+            "image": "/images/team/david.jpg"
+        }
+    ],
+    "testimonials": [
+        {
+            "id": 1,
+            "name": "Jessica M.",
+            "rating": 5,
+            "comment": "Best coffee in town! The atmosphere is cozy and the baristas really know their craft.",
+            "date": "2026-01-15",
+            "avatar": "/images/avatars/jessica.jpg"
+        },
+        {
+            "id": 2,
+            "name": "Ryan T.",
+            "rating": 5,
+            "comment": "I come here every morning. The cappuccino is perfection and the pastries are always fresh.",
+            "date": "2026-01-20",
+            "avatar": "/images/avatars/ryan.jpg"
+        },
+        {
+            "id": 3,
+            "name": "Amanda L.",
+            "rating": 5,
+            "comment": "Such a gem! Great coffee, friendly staff, and the perfect spot to work or catch up with friends.",
+            "date": "2026-02-01",
+            "avatar": "/images/avatars/amanda.jpg"
+        },
+        {
+            "id": 4,
+            "name": "Daniel P.",
+            "rating": 5,
+            "comment": "The attention to detail here is amazing. Every drink is crafted with care. Highly recommend!",
+            "date": "2026-02-08",
+            "avatar": "/images/avatars/daniel.jpg"
+        }
+    ]
+}

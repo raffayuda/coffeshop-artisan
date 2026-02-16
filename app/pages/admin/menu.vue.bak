@@ -1,0 +1,600 @@
+<template>
+  <div class="min-h-screen bg-gray-50 flex">
+    <!-- Sidebar -->
+    <div class="w-64 bg-white shadow-lg fixed h-full overflow-y-auto">
+      <div class="p-6">
+        <NuxtLink to="/" class="flex items-center space-x-3 mb-6 group">
+          <div class="w-10 h-10 bg-gradient-to-br from-amber-600 to-amber-800 rounded-xl flex items-center justify-center">
+            <Icon name="mdi:coffee" class="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <div class="font-bold text-lg text-gray-900">Admin Panel</div>
+            <div class="text-xs text-gray-500">Coffee Shop</div>
+          </div>
+        </NuxtLink>
+        
+        <nav class="space-y-2">
+          <NuxtLink to="/admin/dashboard"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <Icon name="mdi:view-dashboard" class="w-5 h-5" />
+            <span>Dashboard</span>
+          </NuxtLink>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-100 text-amber-700 font-medium">
+            <Icon name="mdi:food" class="w-5 h-5" />
+            <span>Menu</span>
+          </div>
+          <NuxtLink to="/admin/vouchers"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <Icon name="mdi:ticket-percent" class="w-5 h-5" />
+            <span>Vouchers</span>
+          </NuxtLink>
+          <button @click="handleLogout"
+            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors mt-4">
+            <Icon name="mdi:logout" class="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 flex-1 p-8">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+          <h1 class="text-3xl font-bold text-gray-900">Menu Management</h1>
+          <button @click="openCreateModal"
+            class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors">
+            <Icon name="mdi:plus" class="w-5 h-5" />
+            <span>Add New Item</span>
+          </button>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-lg shadow-sm mb-6">
+          <div class="border-b border-gray-200 px-6">
+            <nav class="flex space-x-8" aria-label="Tabs">
+              <button
+                v-for="cat in categories"
+                :key="cat.value"
+                @click="activeCategory = cat.value"
+                :class="[
+                  activeCategory === cat.value
+                    ? 'border-amber-500 text-amber-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                  'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+                ]"
+              >
+                {{ cat.label }}
+                <span class="ml-2 text-xs">{{ getCountByCategory(cat.value) }}</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="flex justify-center py-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-amber-600 border-t-transparent"></div>
+        </div>
+
+        <!-- Menu Items Grid -->
+        <div v-else-if="filteredMenus.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="item in filteredMenus" :key="item.id" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="relative h-48 bg-gray-100">
+              <img v-if="item.image" :src="item.image" :alt="item.name" class="w-full h-full object-cover" />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <Icon name="mdi:coffee" class="w-16 h-16 text-gray-300" />
+              </div>
+              <div class="absolute top-2 right-2">
+                <button @click="toggleAvailability(item)"
+                  :class="item.isAvailable ? 'bg-green-500' : 'bg-red-500'"
+                  class="px-3 py-1 text-xs text-white rounded-full font-medium hover:opacity-90 transition-opacity">
+                  {{ item.isAvailable ? 'Available' : 'Sold Out' }}
+                </button>
+              </div>
+            </div>
+            <div class="p-4">
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ item.name }}</h3>
+              <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ item.description }}</p>
+              <div class="flex justify-between items-center mb-4">
+                <div>
+                  <span class="text-xs text-gray-500 block">Starting from</span>
+                  <span class="text-lg font-bold text-amber-600">Rp {{ formatPrice(getLowestPrice(item)) }}</span>
+                </div>
+                <span class="text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded">{{ item.category }}</span>
+              </div>
+              <div class="flex gap-2">
+                <button @click="openEditModal(item)"
+                  class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors">
+                  Edit
+                </button>
+                <button @click="confirmDelete(item)"
+                  class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="text-center py-12">
+          <Icon name="mdi:food-off" class="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p class="text-gray-500">No menu items found in this category</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showModal" @click="closeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div @click.stop class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+              <h2 class="text-2xl font-bold text-gray-900">
+                {{ editMode ? 'Edit Menu Item' : 'Create New Menu Item' }}
+              </h2>
+            </div>
+            
+            <form @submit.prevent="handleSubmit" class="p-6 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Menu Name</label>
+                <input v-model="formData.name" type="text" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea v-model="formData.description" rows="3" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select v-model="formData.category" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                  <option value="COFFEE">Coffee</option>
+                  <option value="NON_COFFEE">Non Coffee</option>
+                  <option value="SNACK">Snack</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                <input v-model="formData.image" type="url" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="https://..." />
+              </div>
+
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Small Price</label>
+                  <input v-model.number="formData.priceSmall" type="number" required min="0"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="25000" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Medium Price</label>
+                  <input v-model.number="formData.priceMedium" type="number" required min="0"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="30000" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Large Price</label>
+                  <input v-model.number="formData.priceLarge" type="number" required min="0"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="35000" />
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input v-model="formData.isAvailable" type="checkbox" id="available"
+                  class="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                <label for="available" class="text-sm font-medium text-gray-700">Available for order</label>
+              </div>
+
+              <div class="flex gap-3 pt-4">
+                <button type="button" @click="closeModal"
+                  class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" :disabled="submitting"
+                  class="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
+                  {{ submitting ? 'Saving...' : (editMode ? 'Update' : 'Create') }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+  </div>
+</template>
+
+<script setup lang="ts">
+definePageMeta({
+  middleware: 'admin',
+  layout: 'dashboard'
+})
+
+const { logout } = useAuth()
+const { createMenu, updateMenu, deleteMenu } = useAdmin()
+
+const menus = ref<any[]>([])
+const loading = ref(true)
+const activeCategory = ref('ALL')
+const showModal = ref(false)
+const editMode = ref(false)
+const submitting = ref(false)
+const currentMenuId = ref('')
+
+const categories = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Coffee', value: 'COFFEE' },
+  { label: 'Non Coffee', value: 'NON_COFFEE' },
+  { label: 'Snack', value: 'SNACK' }
+]
+
+const formData = ref({
+  name: '',
+  description: '',
+  category: 'COFFEE',
+  image: '',
+  priceSmall: 0,
+  priceMedium: 0,
+  priceLarge: 0,
+  isAvailable: true
+})
+
+const filteredMenus = computed(() => {
+  if (activeCategory.value === 'ALL') return menus.value
+  return menus.value.filter(m => m.category === activeCategory.value)
+})
+
+const fetchMenus = async () => {
+  loading.value = true
+  try {
+    const response = await $fetch('/api/menu/all')
+    menus.value = response.menus || []
+  } catch (error) {
+    console.error('Failed to fetch menus:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const getCountByCategory = (category: string) => {
+  if (category === 'ALL') return menus.value.length
+  return menus.value.filter(m => m.category === category).length
+}
+
+const getLowestPrice = (item: any) => {
+  if (item.prices && item.prices.length > 0) {
+    return Math.min(...item.prices.map((p: any) => p.price))
+  }
+  return 0
+}
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('id-ID').format(price)
+}
+
+const openCreateModal = () => {
+  editMode.value = false
+  formData.value = {
+    name: '',
+    description: '',
+    category: 'COFFEE',
+    image: '',
+    priceSmall: 0,
+    priceMedium: 0,
+    priceLarge: 0,
+    isAvailable: true
+  }
+  showModal.value = true
+}
+
+const openEditModal = (item: any) => {
+  editMode.value = true
+  currentMenuId.value = item.id
+  
+  const prices = item.prices || []
+  const smallPrice = prices.find((p: any) => p.size === 'SMALL')?.price || 0
+  const mediumPrice = prices.find((p: any) => p.size === 'MEDIUM')?.price || 0
+  const largePrice = prices.find((p: any) => p.size === 'LARGE')?.price || 0
+  
+  formData.value = {
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    image: item.image,
+    priceSmall: smallPrice,
+    priceMedium: mediumPrice,
+    priceLarge: largePrice,
+    isAvailable: item.isAvailable
+  }
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+}
+
+const handleSubmit = async () => {
+  submitting.value = true
+  
+  const payload = {
+    name: formData.value.name,
+    description: formData.value.description,
+    category: formData.value.category,
+    image: formData.value.image,
+    isAvailable: formData.value.isAvailable,
+    prices: [
+      { size: 'SMALL', price: formData.value.priceSmall },
+      { size: 'MEDIUM', price: formData.value.priceMedium },
+      { size: 'LARGE', price: formData.value.priceLarge }
+    ]
+  }
+
+  let result
+  if (editMode.value) {
+    result = await updateMenu(currentMenuId.value, payload)
+  } else {
+    result = await createMenu(payload)
+  }
+
+  if (result.success) {
+    await fetchMenus()
+    closeModal()
+  } else {
+    alert(result.error || 'Operation failed')
+  }
+
+  submitting.value = false
+}
+
+const toggleAvailability = async (item: any) => {
+  const result = await updateMenu(item.id, { isAvailable: !item.isAvailable })
+  if (result.success) {
+    await fetchMenus()
+  }
+}
+
+const confirmDelete = async (item: any) => {
+  if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+    const result = await deleteMenu(item.id)
+    if (result.success) {
+      await fetchMenus()
+    } else {
+      alert(result.error || 'Delete failed')
+    }
+  }
+}
+
+const handleLogout = async () => {
+  await logout()
+}
+
+onMounted(() => {
+  fetchMenus()
+})
+</script>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
+                <button @click="editMenu(item)"
+                  class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
+                  Edit
+                </button>
+                <button @click="toggleAvailability(item.id, !item.isAvailable)"
+                  :class="item.isAvailable ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                  {{ item.isAvailable ? 'Disable' : 'Enable' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create/Edit Menu Modal -->
+        <div v-if="showCreateModal || showEditModal" @click.self="closeModal"
+          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+              <h2 class="text-2xl font-bold text-gray-900">
+                {{ showEditModal ? 'Edit Menu Item' : 'Add New Menu Item' }}
+              </h2>
+              <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
+                <Icon name="mdi:close" class="w-6 h-6" />
+              </button>
+            </div>
+
+            <form @submit.prevent="saveMenu" class="p-6 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                <input v-model="menuForm.name" type="text" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea v-model="menuForm.description" rows="3" required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select v-model="menuForm.category" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                    <option value="COFFEE">Coffee</option>
+                    <option value="NON_COFFEE">Non-Coffee</option>
+                    <option value="SNACK">Snack</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                  <input v-model.number="menuForm.price" type="number" required min="0"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                <input v-model="menuForm.image" type="url"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+              </div>
+
+              <div class="flex items-center">
+                <input v-model="menuForm.isAvailable" type="checkbox" class="w-4 h-4 text-amber-600 rounded" />
+                <label class="ml-2 text-sm text-gray-700">Available for order</label>
+              </div>
+
+              <div class="flex gap-3 pt-4">
+                <button type="submit" :disabled="saving"
+                  class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50">
+                  {{ saving ? 'Saving...' : (showEditModal ? 'Update' : 'Create') }}
+                </button>
+                <button type="button" @click="closeModal"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+const { user } = useAuth()
+const { createMenu, updateMenu } = useAdmin()
+const { products } = useProducts()
+
+// Redirect if not admin
+if (user.value?.role !== 'ADMIN') {
+  navigateTo('/')
+}
+
+const activeCategory = ref('ALL')
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const saving = ref(false)
+const currentEditId = ref('')
+
+const categories = [
+  { label: 'All Items', value: 'ALL' },
+  { label: 'Coffee', value: 'COFFEE' },
+  { label: 'Non-Coffee', value: 'NON_COFFEE' },
+  { label: 'Snacks', value: 'SNACK' }
+]
+
+const menuForm = ref({
+  name: '',
+  description: '',
+  category: 'COFFEE',
+  price: 0,
+  image: '',
+  isAvailable: true
+})
+
+const menus = ref<any[]>([])
+
+const filteredMenus = computed(() => {
+  if (activeCategory.value === 'ALL') {
+    return menus.value
+  }
+  return menus.value.filter((m: any) => m.category === activeCategory.value)
+})
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('id-ID').format(price)
+}
+
+const editMenu = (item: any) => {
+  currentEditId.value = item.id
+  menuForm.value = {
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    price: item.price,
+    image: item.image || '',
+    isAvailable: item.isAvailable
+  }
+  showEditModal.value = true
+}
+
+const closeModal = () => {
+  showCreateModal.value = false
+  showEditModal.value = false
+  currentEditId.value = ''
+  menuForm.value = {
+    name: '',
+    description: '',
+    category: 'COFFEE',
+    price: 0,
+    image: '',
+    isAvailable: true
+  }
+}
+
+const saveMenu = async () => {
+  saving.value = true
+
+  let result
+  if (showEditModal.value) {
+    result = await updateMenu(currentEditId.value, menuForm.value)
+  } else {
+    result = await createMenu(menuForm.value)
+  }
+
+  if (result.success) {
+    // Refresh menus list
+    await fetchMenus()
+    closeModal()
+  } else {
+    alert(result.error)
+  }
+
+  saving.value = false
+}
+
+const toggleAvailability = async (menuId: string, isAvailable: boolean) => {
+  const result = await updateMenu(menuId, { isAvailable })
+  if (result.success) {
+    await fetchMenus()
+  }
+}
+
+const fetchMenus = async () => {
+  try {
+    const response = await $fetch('/api/menu/all')
+    menus.value = response.menus || []
+  } catch (error) {
+    console.error('Failed to fetch menus')
+  }
+}
+
+onMounted(() => {
+  fetchMenus()
+})
+</script>

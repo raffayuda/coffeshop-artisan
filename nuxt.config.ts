@@ -9,6 +9,22 @@ export default defineNuxtConfig({
     '@nuxt/icon',
   ],
 
+  // Runtime configuration for environment variables
+  runtimeConfig: {
+    session: {
+      password: process.env.NUXT_SESSION_PASSWORD || 'default-secret-key-change-in-production-min-32-chars',
+      name: 'nuxt-session',
+      cookie: {
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      }
+    },
+    public: {}
+  },
+
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
     configPath: 'tailwind.config.js',
@@ -39,6 +55,19 @@ export default defineNuxtConfig({
           additionalData: ''
         }
       }
+    }
+  },
+
+  // Nitro configuration for serverless deployment
+  nitro: {
+    preset: 'vercel',
+    storage: {
+      // Use memory storage for sessions in serverless
+      data: { driver: 'memory' }
+    },
+    experimental: {
+      // Enable async context for better session handling
+      asyncContext: true
     }
   }
 })

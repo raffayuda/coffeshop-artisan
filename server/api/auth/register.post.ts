@@ -81,14 +81,25 @@ export default defineEventHandler(async (event) => {
     })
 
     // Use nuxt-auth-utils to set user session
+    // Only store essential user data
+    const sessionUser = {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      phone: user.phone || null,
+      avatar: user.avatar || null,
+      loyaltyPoint: 0
+    }
+    
     await setUserSession(event, {
-      user,
+      user: sessionUser,
       loggedInAt: Date.now()
     })
 
     return {
       success: true,
-      user
+      user: sessionUser
     }
   } catch (error: any) {
     if (error.statusCode) {

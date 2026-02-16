@@ -36,16 +36,27 @@ export default defineEventHandler(async (event) => {
     }
 
     // Use nuxt-auth-utils to set user session
+    // Only store essential user data to avoid cookie size limit (4KB)
     const { password: _, ...userWithoutPassword } = user
     
+    const sessionUser = {
+      id: userWithoutPassword.id,
+      email: userWithoutPassword.email,
+      fullName: userWithoutPassword.fullName,
+      role: userWithoutPassword.role,
+      phone: userWithoutPassword.phone || null,
+      avatar: userWithoutPassword.avatar || null,
+      loyaltyPoint: userWithoutPassword.loyaltyPoint || 0
+    }
+    
     await setUserSession(event, {
-      user: userWithoutPassword,
+      user: sessionUser,
       loggedInAt: Date.now()
     })
 
     return {
       success: true,
-      user: userWithoutPassword
+      user: sessionUser
     }
   } catch (error: any) {
     if (error.statusCode) {

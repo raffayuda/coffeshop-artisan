@@ -7,26 +7,52 @@ import type { H3Event } from 'h3'
  * @returns User object from session
  */
 export async function requireAuth(event: H3Event, allowedRoles?: string[]) {
-  const session = await getUserSession(event)
+  try {
+    const session = await getUserSession(event)
 
-  if (!session || !session.user) {
+    // Debug logging for production
+    if (!session || !session.user) {
+      console.error('[requireAuth] No session or user found', {
+        hasSession: !!session,
+        sessionKeys: session ? Object.keys(session) : [],
+        path: event.path
+      })
+      
+      throw createError({
+        statusCode: 401,
+        message: 'Not authenticated'
+      })
+    }
+
+    const user = session.user as any
+
+    // Check role if specified
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+      console.error('[requireAuth] Insufficient permissions', {
+        userRole: user.role,
+        allowedRoles,
+        path: event.path
+      })
+      
+      throw createError({
+        statusCode: 403,
+        message: 'Insufficient permissions'
+      })
+    }
+
+    return user
+  } catch (error: any) {
+    // Re-throw if already an H3Error
+    if (error.statusCode) {
+      throw error
+    }
+    
+    console.error('[requireAuth] Unexpected error:', error)
     throw createError({
-      statusCode: 401,
-      message: 'Not authenticated'
+      statusCode: 500,
+      message: 'Authentication error'
     })
   }
-
-  const user = session.user as any
-
-  // Check role if specified
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    throw createError({
-      statusCode: 403,
-      message: 'Insufficient permissions'
-    })
-  }
-
-  return user
 }
 
 /**
@@ -44,6 +70,7 @@ export async function optionalAuth(event: H3Event) {
 
     return session.user as any
   } catch (error) {
+    console.error('[optionalAuth] Error getting session:', error)
     return null
   }
 }

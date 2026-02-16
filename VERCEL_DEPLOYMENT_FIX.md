@@ -36,6 +36,9 @@ DATABASE_URL="postgresql://user:password@host:5432/database?schema=public"
 # Auth Secret (Required - Generate with: openssl rand -base64 32)
 NUXT_SESSION_PASSWORD="your-32-character-secret-key-here"
 
+# Node Environment (Required)
+NODE_ENV="production"
+
 # Optional - Database Connection Pool
 DATABASE_CONNECTION_LIMIT="10"
 ```

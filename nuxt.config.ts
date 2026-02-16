@@ -9,24 +9,14 @@ export default defineNuxtConfig({
     '@nuxt/icon',
   ],
 
-  // Runtime configuration for environment variables
+  // Explicitly configure session for production (required for nuxt-auth-utils)
   runtimeConfig: {
-    // Server-only runtime config
     session: {
-      password: process.env.NUXT_SESSION_PASSWORD || 'default-secret-key-change-in-production-min-32-chars',
-      name: 'nuxt-session',
+      password: process.env.NUXT_SESSION_PASSWORD || 'default-secret-change-me',
       cookie: {
-        sameSite: 'lax', // or 'none' if using cross-origin
-        path: '/',
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-        httpOnly: true,
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        domain: undefined // Let browser handle domain automatically
+        sameSite: 'lax',
+        secure: true // Always use secure cookies (Vercel is always HTTPS)
       }
-    },
-    // Public runtime config (accessible on both client and server)
-    public: {
-      apiBase: process.env.API_BASE_URL || ''
     }
   },
 
